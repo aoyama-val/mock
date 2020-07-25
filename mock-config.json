@@ -1,0 +1,25 @@
+[
+  {
+    "path_query": "/users",
+    "response": {
+      "bodyFile": "users/index.json"
+    }
+  },
+  {
+    "path_query": "/users?id=1",
+    "response": {
+      "statusCode": 200,
+      "headers": { "X-My-Header": "This is a pen." },
+      "bodyFile": "users/1.json"
+    }
+  },
+  {
+    "path_query": "/users",
+    "method": "POST",
+    "response": {
+      "statusCode": 201,
+      "headers": {},
+      "bodyFile": "users/created.json"
+    }
+  }
+]

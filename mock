@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+
+require 'webrick'
+require 'cgi'
+require 'time'
+require 'json'
+
+port = 8181
+config_path = 'mock-config.json'
+
+server = WEBrick::HTTPServer.new(
+  :Port => port,
+  :HTTPVersion => WEBrick::HTTPVersion.new('1.1'),
+)
+
+server.mount_proc('/') do |req, res|
+  # Reload config every time so that you don't need to restart the server.
+  config = JSON.parse(File.read(config_path))
+
+  req.request_line =~ /\A(\w+) (\S+)/
+  method = $1
+  path_query = $2
+
+  found = false
+  config.each do |_config|
+    if path_query == _config['path_query'] && method.upcase == (_config['method'] || 'GET').upcase
+      found = true
+      res.status = _config.dig('response', 'statusCode') || 200
+      (_config.dig('response', 'headers') || {}).each do |k, v|
+        res[k] = v
+      end
+      begin
+        res.body = File.read(_config.dig('response', 'bodyFile'))
+      rescue => e
+        res.body = JSON.pretty_generate({ 'Error': e.message })
+      end
+      break
+    end
+  end
+
+  unless found
+    res.status = 404
+    res['Content-Type'] = 'application/json; charset=UTF-8'
+    res.body = JSON.pretty_generate({ message: "Resource not defined: #{method} #{path_query}" })
+  end
+end
+
+Signal.trap('INT') { server.shutdown }
+server.start
